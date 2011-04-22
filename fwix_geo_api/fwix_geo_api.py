@@ -159,7 +159,7 @@ class FwixApi(object):
         parsed_location = {}
         for unicode_key in raw_location:
             parsed_location[str(unicode_key)] = raw_location[unicode_key]
-        location = Location(**raw_location)
+        location = Location(**parsed_location)
         return location
 
     def get_place(self, uuid):
