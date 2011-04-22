@@ -68,7 +68,7 @@ class FwixApiError(Exception):
         super(FwixApiError,self).__init__(message)
 
 
-class Fwix(object):
+class FwixApi(object):
     """The main API object, initialized with your api key and 
        an optional string identifying a unique user
 
@@ -155,6 +155,10 @@ class Fwix(object):
         url = self.kBASE_URL + '/location.json'
         params = {self.kLAT_KEY : latitude, self.kLNG_KEY: longitude}
         raw_location = self._fetch_url(url, params)
+        #python 2.6.(< 5) bug handling
+        parsed_location = {}
+        for unicode_key in raw_location:
+            parsed_location[str(unicode_key)] = raw_location[unicode_key]
         location = Location(**raw_location)
         return location
 
@@ -164,6 +168,15 @@ class Fwix(object):
         raw_place = self._fetch_url(url)
         return self._parse_place(raw_place['place'])
 
+    def generic_get_places(self,params):
+        """ Returns a list of places from the given api parameters"""
+        url = self.kBASE_URL + self.kPLACES_PATH
+        raw_places = self._fetch_url(url,params)
+        places = []
+        for raw_place in raw_places['places']:
+            places.append(self._parse_place(raw_place))
+        return places
+                          
     def get_places_by_lat_lng(self,
                               latitude,
                               longitude,
@@ -171,14 +184,9 @@ class Fwix(object):
                               radius = None,
                               categories = None):
         """ Returns a list of places near the given lat and lng"""
-        url = self.kBASE_URL + self.kPLACES_PATH
         params = {self.kLAT_KEY: latitude, self.kLNG_KEY: longitude}
         params.update(self._place_filters(page,radius,categories))         
-        raw_places = self._fetch_url(url,params)
-        places = []
-        for raw_place in raw_places['places']:
-            places.append(self._parse_place(raw_place))
-        return places
+        return self.generic_get_places(params)
 
     def get_places_by_postal_code(self, 
                                   postal_code,
@@ -186,14 +194,9 @@ class Fwix(object):
                                   radius = None,
                                   categories = None):
         """ Returns a list of places near the given postal code"""
-        url = self.kBASE_URL + self.kPLACES_PATH
         params = {self.kPOSTAL_CODE_KEY: postal_code}
         params.update(self._place_filters(page,radius,categories))  
-        raw_places = self._fetch_url(url,params)       
-        places = []
-        for raw_place in raw_places['places']:
-            places.append(self._parse_place(raw_place))
-        return places
+        return self.generic_get_places(params)
 
     def get_places_by_location(self,
                                location,
@@ -201,14 +204,9 @@ class Fwix(object):
                                radius = None,
                                categories = None):
         """Given a location object, returns associated places"""
-        url = self.kBASE_URL + self.kPLACES_PATH
         params = location.get_query_map()
         params.update(self._place_filters(page,radius,categories))  
-        raw_places = self._fetch_url(url,params)       
-        places = []
-        for raw_place in raw_places['places']:
-            places.append(self._parse_place(raw_place))
-        return places
+        return self.generic_get_places(params)
 
     def update_place(self, Place):
         """ Updates information about a place, returns a boolean of whether the request succeeded or not"""
