@@ -343,7 +343,11 @@ class FwixApi(object):
         new_place[self.kLATITUDE_KEY] = raw_place[self.kLAT_KEY]
         new_place[self.kLONGITUDE_KEY] = raw_place[self.kLNG_KEY]
         for category in raw_place[self.kCATEGORIES_KEY]:
-            categories.append(Category(**category))
+            #python 2.6.(< 5) bug handling
+            parsed_category = {}
+            for unicode_key in category:
+                parsed_category[str(unicode_key)] = category[unicode_key]
+            categories.append(Category(**parsed_category))
         new_place[self.kCATEGORIES_KEY] = categories
         place = Place(**new_place)
         return place
