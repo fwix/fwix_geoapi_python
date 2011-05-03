@@ -6,7 +6,7 @@ http://developers.fwix.com
 
 Included in this repository:
 
-./fwix_geo_api - the fwix geo api packge
+./fwix_geo_api - the Fwix geo api packge
 ./sample - a sample file to show you how to use the api
 ./test - tests for the geo api package
 
