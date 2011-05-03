@@ -1,0 +1,19 @@
+These files will get you going with the Fwix geo api!
+
+You can get a free API key at 
+
+http://developers.fwix.com
+
+Included in this repository:
+
+./fwix_geo_api - the fwix geo api packge
+./sample - a sample file to show you how to use the api
+./test - tests for the geo api package
+
+
+You can find or request help for any problems at:
+
+https://groups.google.com/group/fwix-api
+
+
+The Fwix Team
