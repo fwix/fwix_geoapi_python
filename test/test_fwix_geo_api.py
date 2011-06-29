@@ -1,5 +1,8 @@
 import unittest
-from fwix_geo_api import *
+
+import sys
+sys.path.append('..')
+from fwix_geo_api.fwix_geo_api import *
 
 kFWIX_API_KEY = '' # your api key
 kFWIX_LAT = 37.787462

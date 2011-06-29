@@ -1,10 +1,11 @@
 """
 Testing fwix_geo API
 """
+import sys
+sys.path.append("../")
+from fwix_geo_api.fwix_geo_api import *
 
-from fwix_geo_api import *
-
-kFWIX_API_KEY = '42a97fb59252'
+kFWIX_API_KEY = ''
 kFWIX_LAT = 37.787462
 kFWIX_LON = -122.399223
 kRANDOM_PLACE_UUID = '17f5fcd-3312-7a52-f551-d4e8f70dbc8a9'
