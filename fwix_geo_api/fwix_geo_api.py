@@ -24,7 +24,7 @@
 """
 
 
-import urllib
+import urllib, httplib
 try:
     import json
     _json_load = lambda l: json.loads(l)
@@ -93,7 +93,9 @@ class FwixApi(object):
     debugging = False
     kGET_REQUEST = 'GET'
     kPOST_REQUEST = 'POST'
+    kDELETE_REQUEST = 'DELETE'
     kBASE_URL = 'http://geoapi.fwix.com'
+    kBASE_DOMAIN = 'geoapi.fwix.com'
     kPLACES_PATH = '/places.json'
     kCONTENT_PATH = '/content.json'
     kLAT_KEY = 'lat'
@@ -106,7 +108,7 @@ class FwixApi(object):
     kLOCALITY_KEY = 'locality'
     kPOSTAL_CODE_KEY = 'postal_code'
     kADDRESS_KEY = 'address'
-    LOCATION_KEYS = (kCOUNTRY_KEY,kPROVINCE_KEY,kCITY_KEY,kLOCALITY_KEY,kPOSTAL_CODE_KEY, kPOSTAL_CODE_KEY, kADDRESS_KEY)
+    LOCATION_KEYS = (kCOUNTRY_KEY,kPROVINCE_KEY,kCITY_KEY,kLOCALITY_KEY,kPOSTAL_CODE_KEY,kADDRESS_KEY)
     kUUID_KEY = 'uuid'
     kNAME_KEY = 'name'
     kLINK_KEY = 'link'
@@ -121,6 +123,8 @@ class FwixApi(object):
     kBODY_KEY = 'body'
     kIMAGE_KEY = 'image'
     kAUTHOR_KEY = 'author'
+    kCATEGORY = 'category'
+    kLOCATION = 'location'
 
     def __init__(self, api_key, user_id = None):
         self._api_key = api_key
@@ -208,13 +212,69 @@ class FwixApi(object):
         params.update(self._place_filters(page,radius,categories))  
         return self.generic_get_places(params)
 
-    def update_place(self, Place):
+    def update_place_given_place(self, place):
+        """Given a place object, updates information about that place, and returns a boolean of 
+        whether the request succeeded or not """
+        params = {}
+        for key in (self.kPHONE_NUMBER_KEY,
+                 self.kNAME_KEY,
+                 self.kLATITUDE_KEY,
+                 self.kLONGITUDE_KEY):
+            params[key] = place[key]
+        for key in self.LOCATION_KEYS:
+            params[key] = place[self.kLOCATION][key]
+        
+        url = self.kBASE_URL + '/places/%s.json' % place[self.kUUID_KEY]
+        response = self._fetch_url(url, params, self.kPOST_REQUEST)
+        return response
+        
+    def update_place(self, 
+                     uuid, 
+                     latitude = None, 
+                     longitude = None, 
+                     name = None, 
+                     city = None, 
+                     address = None, 
+                     country = None, 
+                     province = None, 
+                     postal_code = None,  
+                     phone_number = None, 
+                     category = None):
         """ Updates information about a place, returns a boolean of whether the request succeeded or not"""
-        raise NotImplementedError
+        params = {}
+        if latitude:
+            params[self.kLAT_KEY] = latitude 
+        if longitude:
+            params[self.kLNG_KEY] = longitude  
+        if name:
+            params[self.kNAME_KEY] = name
+        if city:
+            params[self.kCITY_KEY] = city 
+        if address:
+            params[self.kADDRESS_KEY] = address
+        if country:
+            params[self.kCOUNTRY_KEY] = country
+        if province:
+            params[self.kPROVINCE_KEY] = province
+        if postal_code:
+            params[self.kPOSTAL_CODE_KEY] = postal_code
+        if phone_number:
+            params[self.kPHONE_NUMBER_KEY] = phone_number
+        if category:
+            params[self.kCATEGORY] = category
+          
+        url = self.kBASE_URL + '/places/%s.json' % uuid
+        response = self._fetch_url(url, params, self.kPOST_REQUEST)
+        return response    
 
-    def delete_place(self, Place):
-        """ Deletes a place, returs a boolean of wheter or not the request was succesful"""
-        raise NotImplementedError
+    def delete_place(self, uuid):
+        """ Deletes a place, returs a boolean of whether or not the request was succesful"""
+        url = '/places/%s.json' % uuid
+        response = self._fetch_url(url, request_type = self.kDELETE_REQUEST)
+        if response['success'] is 1:
+            return True
+        else:
+            return False
 
     def generic_get_content(self, params, content_types, page, range, sort_by, search_query):
         url = self.kBASE_URL + self.kCONTENT_PATH
@@ -284,25 +344,35 @@ class FwixApi(object):
         if request_type == self.kPOST_REQUEST:
             query_str = ''
             post_args = urllib.urlencode(query_map)
-        elif request_type == self.kGET_REQUEST:
+        elif request_type == self.kGET_REQUEST or request_type == self.kDELETE_REQUEST:
             query_str = '?' + urllib.urlencode(query_map)
             post_args = None
         else:
-            raise NotImplementedError, 'Only POST and GET are now supported'
+            raise NotImplementedError, 'Only POST, GET, and DELETE are now supported'
         url = base_url + query_str
         self.debug('URL: %s \nPOST: %s' % (url,post_args))
-        response = urllib.urlopen(url, post_args)
+        if request_type == self.kDELETE_REQUEST: 
+            conn = httplib.HTTPConnection(self.kBASE_DOMAIN)
+            conn.request(self.kDELETE_REQUEST, url)
+            response = conn.getresponse()
+        else:
+            response = urllib.urlopen(url, post_args)
         try:
             parsed_response = _json_load(response.read())
         except Exception, e:
             self.debug(response.read())
             raise e
         finally:
-            response_code = response.getcode()
-            response.close()
+            if request_type == self.kDELETE_REQUEST:
+                response_code = response.status
+                conn.close()
+            else:
+                response_code = response.getcode()
+                response.close()
 
         if int(response_code) != 200:
             raise FwixApiError('Bad Request : ' + parsed_response['message'])
+        
         return parsed_response
 
     def _parse_content(self, raw_content, content_type):
